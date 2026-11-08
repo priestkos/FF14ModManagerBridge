@@ -16,6 +16,7 @@
     <Description>Companion to the FF14 Mod Manager Windows app. Answers over a local, current-user-only named pipe: who you are, which Penumbra collection is on you, and applies Glamourer designs or toggles Penumbra mods on request.</Description>
     <Tags>penumbra;glamourer;mods;companion</Tags>
     <RepoUrl>https://github.com/priestkos/FF14ModManagerBridge</RepoUrl>
+    <IconUrl>https://raw.githubusercontent.com/priestkos/FF14ModManagerBridge/main/images/icon.png</IconUrl>
   </PropertyGroup>
 
   <ItemGroup>
