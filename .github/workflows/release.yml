@@ -125,6 +125,10 @@ jobs:
           echo "RELEASE_VERSION=$nextVersionText" >> $env:GITHUB_ENV
           exit 0
 
+      - name: Run the pipe-protocol tests
+        if: env.SKIP_RELEASE != 'true'
+        run: dotnet run --project FF14ModManagerBridge.Tests/FF14ModManagerBridge.Tests.csproj -c Release
+
       - name: Install the Dalamud development distribution
         if: env.SKIP_RELEASE != 'true'
         shell: pwsh
