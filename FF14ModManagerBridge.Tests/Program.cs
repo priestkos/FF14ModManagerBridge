@@ -51,6 +51,21 @@ Check((string?)afterStuck?["echo"] == "after-stuck", "a silent client is dropped
 await stuck.DisposeAsync();
 Check((string?)(await Bridge.Ask(new JsonObject { ["cmd"] = "still" }, pipeName: pipe))?["echo"] == "still", "the server survives the read timeout");
 
+// A server from another build (version skew) answering with a non-object or broken JSON line.
+async Task<JsonObject?> AskRaw(string reply)
+{
+    var name = "FF14ModManager.Test." + Guid.NewGuid().ToString("N")[..8];
+    await using var srv = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+    var ask = Bridge.Ask(new JsonObject { ["cmd"] = "status" }, pipeName: name);
+    await srv.WaitForConnectionAsync();
+    using var rd = new StreamReader(srv, leaveOpen: true);
+    await rd.ReadLineAsync();
+    await using var wr = new StreamWriter(srv, leaveOpen: true) { AutoFlush = true };
+    await wr.WriteLineAsync(reply);
+    return await ask;
+}
+Check(await AskRaw("[1]") == null && await AskRaw("{bad") == null, "bridge: non-object or malformed reply = null, not an exception");
+
 cts.Cancel();
 await server.WaitAsync(TimeSpan.FromSeconds(5));
 var sw = Stopwatch.StartNew();
