@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mock-up: applyDesign — Glamourer design on you</title>
+    <link rel="stylesheet" href="common.css" />
+  </head>
+  <body>
+    <div class="game-backdrop"></div>
+    <div class="mockup-banner">Mock-up</div>
+    <div class="scene-label">applyDesign: put a Glamourer design on you</div>
+    <div class="pipe-head"><h1><code>{"cmd":"applyDesign","id":"&lt;design guid&gt;"}</code></h1><p>One-off, equipment + customisation &mdash; Glamourer's own default for applying a design</p></div>
+    <div class="lanes">
+      <div class="lane"><div class="lane-title">FF14 Mod Manager app &rarr; pipe</div><div class="lane-body"><div class="tag">request</div>
+<div class="json-block">{&quot;cmd&quot;:&quot;applyDesign&quot;,&quot;id&quot;:&quot;6d1e2f3a-4b5c-4d6e-8f70-81a2b3c4d5e6&quot;}</div>
+<div class="tag">reply · applied</div>
+<div class="json-block">{<span class="ok">&quot;ok&quot;:true</span>}</div>
+<div class="tag">reply · failed</div>
+<table class="errtable">
+<tr><td><code>id</code> is not a GUID</td><td class="r">bad design id</td></tr>
+<tr><td>no local player (title screen)</td><td class="r">not logged in</td></tr>
+<tr><td>Glamourer returns an error code</td><td class="r">Glamourer said DesignNotFound</td></tr>
+</table></div></div>
+      <div class="arrow">&rarr;<br>&larr;</div>
+      <div class="lane plugin"><div class="lane-title">FF14 Mod Manager Bridge (framework thread)</div><div class="lane-body"><ol>
+<li>parse <code>id</code> as a GUID</li>
+<li>check you are logged in</li>
+<li>Glamourer <code>ApplyDesign(id, 0, 0, flags)</code><br>object index 0 = you, key 0</li>
+<li>flags = <code>Once | Equipment | Customization</code> (not locked)</li>
+<li><code>Success</code> &rarr; <code>{ok}</code>; anything else &rarr; <code>Glamourer said &lt;code&gt;</code></li>
+</ol></div></div>
+    </div>
+    <div class="note">Glamourer has no IPC that reports which design is on you; the app remembers the last design it applied.</div>
+  </body>
+</html>

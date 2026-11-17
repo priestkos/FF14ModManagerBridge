@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mock-up: status — character, world, collection</title>
+    <link rel="stylesheet" href="common.css" />
+  </head>
+  <body>
+    <div class="game-backdrop"></div>
+    <div class="mockup-banner">Mock-up</div>
+    <div class="scene-label">status: who you are and the Penumbra collection on you</div>
+    <div class="pipe-head"><h1><code>{"cmd":"status"}</code></h1><p>The app asks who is on screen; the reply is read on Dalamud's framework thread</p></div>
+    <div class="lanes">
+      <div class="lane"><div class="lane-title">FF14 Mod Manager app &rarr; pipe</div><div class="lane-body"><div class="tag">request (one JSON line)</div>
+<div class="json-block">{&quot;cmd&quot;:&quot;status&quot;}</div>
+<div class="tag">reply · logged in</div>
+<div class="json-block">{<span class="ok">&quot;ok&quot;:true</span>,&quot;character&quot;:&quot;Wol Adventurer&quot;,&quot;world&quot;:&quot;Sample World&quot;,&quot;collection&quot;:&quot;Default&quot;,&quot;collectionId&quot;:&quot;0c2b5f9e-7a41-4d1e-9b3a-5e6f7a8b9c0d&quot;}</div>
+<div class="tag">reply · title screen (nobody on screen)</div>
+<div class="json-block">{<span class="ok">&quot;ok&quot;:true</span>}</div></div></div>
+      <div class="arrow">&rarr;<br>&larr;</div>
+      <div class="lane plugin"><div class="lane-title">FF14 Mod Manager Bridge (framework thread)</div><div class="lane-body"><ol>
+<li><code>IObjectTable.LocalPlayer</code> &mdash; none: answer just <code>{ok}</code></li>
+<li><code>character</code> = your name, <code>world</code> = your home world</li>
+<li>Penumbra <code>GetCollectionForObject</code> on your object index</li>
+<li>valid &rarr; <code>collection</code> name + <code>collectionId</code></li>
+</ol>
+<div class="tag" style="margin-top:10px">Penumbra IPC throws</div>
+<div class="json-block">&quot;collection&quot;:&quot;(Penumbra unavailable: &lt;message&gt;)&quot;</div></div></div>
+    </div>
+    <div class="note">The app shows this as its <code>In game:</code> line. Sample names are placeholders.</div>
+  </body>
+</html>

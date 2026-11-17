@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mock-up walkthrough: FF14 Mod Manager Bridge</title>
+    <link rel="stylesheet" href="../../screenshots/src/common.css" />
+    <style>
+      .scene { position: absolute; inset: 0; opacity: 0; }
+      .caption { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 9998;
+        padding: 6px 16px; font-size: 15px; color: #f0f0f0; background: rgba(0, 0, 0, 0.72); border-radius: 4px; }
+      .scene .note { bottom: 60px; }
+    </style>
+  </head>
+  <body>
+    <div class="game-backdrop"></div>
+    <div class="scene" id="s0"><div class="pipe-head"><h1><code>{"cmd":"status"}</code></h1><p>The app asks who is on screen; the reply is read on Dalamud's framework thread</p></div>
+    <div class="lanes">
+      <div class="lane"><div class="lane-title">FF14 Mod Manager app &rarr; pipe</div><div class="lane-body"><div class="tag">request (one JSON line)</div>
+<div class="json-block">{&quot;cmd&quot;:&quot;status&quot;}</div>
+<div class="tag">reply · logged in</div>
+<div class="json-block">{<span class="ok">&quot;ok&quot;:true</span>,&quot;character&quot;:&quot;Wol Adventurer&quot;,&quot;world&quot;:&quot;Sample World&quot;,&quot;collection&quot;:&quot;Default&quot;,&quot;collectionId&quot;:&quot;0c2b5f9e-7a41-4d1e-9b3a-5e6f7a8b9c0d&quot;}</div>
+<div class="tag">reply · title screen (nobody on screen)</div>
+<div class="json-block">{<span class="ok">&quot;ok&quot;:true</span>}</div></div></div>
+      <div class="arrow">&rarr;<br>&larr;</div>
+      <div class="lane plugin"><div class="lane-title">FF14 Mod Manager Bridge (framework thread)</div><div class="lane-body"><ol>
+<li><code>IObjectTable.LocalPlayer</code> &mdash; none: answer just <code>{ok}</code></li>
+<li><code>character</code> = your name, <code>world</code> = your home world</li>
+<li>Penumbra <code>GetCollectionForObject</code> on your object index</li>
+<li>valid &rarr; <code>collection</code> name + <code>collectionId</code></li>
+</ol>
+<div class="tag" style="margin-top:10px">Penumbra IPC throws</div>
+<div class="json-block">&quot;collection&quot;:&quot;(Penumbra unavailable: &lt;message&gt;)&quot;</div></div></div>
+    </div>
+    <div class="note">The app shows this as its <code>In game:</code> line. Sample names are placeholders.</div></div>
+    <div class="scene" id="s1"><div class="pipe-head"><h1><code>{"cmd":"applyDesign","id":"&lt;design guid&gt;"}</code></h1><p>One-off, equipment + customisation &mdash; Glamourer's own default for applying a design</p></div>
+    <div class="lanes">
+      <div class="lane"><div class="lane-title">FF14 Mod Manager app &rarr; pipe</div><div class="lane-body"><div class="tag">request</div>
+<div class="json-block">{&quot;cmd&quot;:&quot;applyDesign&quot;,&quot;id&quot;:&quot;6d1e2f3a-4b5c-4d6e-8f70-81a2b3c4d5e6&quot;}</div>
+<div class="tag">reply · applied</div>
+<div class="json-block">{<span class="ok">&quot;ok&quot;:true</span>}</div>
+<div class="tag">reply · failed</div>
+<table class="errtable">
+<tr><td><code>id</code> is not a GUID</td><td class="r">bad design id</td></tr>
+<tr><td>no local player (title screen)</td><td class="r">not logged in</td></tr>
+<tr><td>Glamourer returns an error code</td><td class="r">Glamourer said DesignNotFound</td></tr>
+</table></div></div>
+      <div class="arrow">&rarr;<br>&larr;</div>
+      <div class="lane plugin"><div class="lane-title">FF14 Mod Manager Bridge (framework thread)</div><div class="lane-body"><ol>
+<li>parse <code>id</code> as a GUID</li>
+<li>check you are logged in</li>
+<li>Glamourer <code>ApplyDesign(id, 0, 0, flags)</code><br>object index 0 = you, key 0</li>
+<li>flags = <code>Once | Equipment | Customization</code> (not locked)</li>
+<li><code>Success</code> &rarr; <code>{ok}</code>; anything else &rarr; <code>Glamourer said &lt;code&gt;</code></li>
+</ol></div></div>
+    </div>
+    <div class="note">Glamourer has no IPC that reports which design is on you; the app remembers the last design it applied.</div></div>
+    <div class="scene" id="s2"><div class="pipe-head"><h1><code>{"cmd":"setMod","collection":"&lt;guid&gt;","dir":"&lt;mod folder&gt;","enabled":true}</code></h1><p>Enable or disable a mod in a Penumbra collection, then redraw you so it shows straight away</p></div>
+    <div class="lanes">
+      <div class="lane"><div class="lane-title">FF14 Mod Manager app &rarr; pipe</div><div class="lane-body"><div class="tag">request</div>
+<div class="json-block">{&quot;cmd&quot;:&quot;setMod&quot;,&quot;collection&quot;:&quot;0c2b5f9e-7a41-4d1e-9b3a-5e6f7a8b9c0d&quot;,&quot;dir&quot;:&quot;Sample Hair Mod&quot;,&quot;enabled&quot;:true}</div>
+<div class="tag">reply · switched (or already in that state)</div>
+<div class="json-block">{<span class="ok">&quot;ok&quot;:true</span>}</div>
+<div class="tag">reply · failed</div>
+<table class="errtable">
+<tr><td><code>collection</code> is not a GUID</td><td class="r">bad collection id</td></tr>
+<tr><td><code>dir</code> missing or empty</td><td class="r">missing mod directory</td></tr>
+<tr><td><code>enabled</code> missing</td><td class="r">missing enabled flag</td></tr>
+<tr><td>Penumbra returns an error code</td><td class="r">Penumbra said ModMissing</td></tr>
+</table></div></div>
+      <div class="arrow">&rarr;<br>&larr;</div>
+      <div class="lane plugin"><div class="lane-title">FF14 Mod Manager Bridge (framework thread)</div><div class="lane-body"><ol>
+<li>validate <code>collection</code>, <code>dir</code>, <code>enabled</code></li>
+<li>Penumbra <code>TrySetMod(collection, dir, enabled)</code></li>
+<li><code>Success</code> or <code>NothingChanged</code> counts as done</li>
+<li>logged in &rarr; Penumbra <code>RedrawObject(0, Redraw)</code> on you</li>
+<li>reply <code>{ok}</code></li>
+</ol></div></div>
+    </div>
+    <div class="note">Only the mod you name is touched, in the collection you name. The redraw is skipped at the title screen.</div></div>
+    <div class="scene" id="s3"><div class="pipe-head"><h1>Named pipe <code>FF14ModManager.Bridge</code></h1><p><code>PipeOptions.CurrentUserOnly</code> on both ends &middot; one JSON line in, one JSON line out, per connection</p></div>
+    <div class="lanes">
+      <div class="lane"><div class="lane-title">FF14 Mod Manager app &rarr; pipe</div><div class="lane-body"><div class="tag">requests the plugin rejects</div>
+<table class="errtable">
+<tr><td>connection closes before a line</td><td class="r">empty request</td></tr>
+<tr><td><code>[1,2]</code> or <code>null</code></td><td class="r">not an object</td></tr>
+<tr><td><code>{not json</code></td><td class="r">(the JSON parser's message)</td></tr>
+<tr><td><code>{"cmd":"redraw"}</code></td><td class="r">unknown command 'redraw'</td></tr>
+</table>
+<div class="tag" style="margin-top:10px">each reply</div>
+<div class="json-block">{<span class="err">&quot;ok&quot;:false</span>,&quot;error&quot;:&quot;&lt;message&gt;&quot;}</div>
+<div class="tag">no bridge (game closed, plugin off)</div>
+<div style="font-size:12.5px">the app's <code>Bridge.Ask</code> returns <code>null</code> after its 2 s connect wait</div></div></div>
+      <div class="arrow">&rarr;<br>&larr;</div>
+      <div class="lane plugin"><div class="lane-title">FF14 Mod Manager Bridge (framework thread)</div><div class="lane-body"><ol>
+<li>one server instance; next one opens after each reply</li>
+<li>a client that connects but sends nothing for 1 s is dropped</li>
+<li>a handler that throws answers <code>{ok:false, error}</code>; the pipe keeps serving</li>
+<li>pipe faults go to the Dalamud log and the loop retries after 250 ms</li>
+</ol>
+<div class="xllog">log.Warning(e, "FF14 Mod Manager bridge: pipe error")</div></div></div>
+    </div>
+    <div class="note">No window, no settings, no slash command: this pipe is the plugin's whole surface.</div></div>
+    <div class="mockup-banner">Mock-up</div>
+    <div class="caption" id="caption"></div>
+    <script>
+      const beats = [[0.0, 4.12], [3.62, 7.75], [7.25, 11.38], [10.88, 15.0]];
+      const captions = ['status — character, world, collection', 'applyDesign — Glamourer design on you', 'setMod — Penumbra mod on/off + redraw', 'Pipe rules — errors become replies'];
+      const F = 0.5;
+      window.seekWalkthrough = (t) => {
+        let top = 0, best = -1;
+        beats.forEach(([a, b], i) => {
+          let o = 0;
+          if (t >= a && t <= b) o = Math.min(1, i === 0 ? 1 : (t - a) / F, i === beats.length - 1 ? 1 : (b - t) / F);
+          document.getElementById("s" + i).style.opacity = o;
+          if (o > best) { best = o; top = i; }
+        });
+        document.getElementById("caption").textContent = captions[top];
+      };
+      window.seekWalkthrough(0);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mock-up: Pipe rules — errors become replies</title>
+    <link rel="stylesheet" href="common.css" />
+  </head>
+  <body>
+    <div class="game-backdrop"></div>
+    <div class="mockup-banner">Mock-up</div>
+    <div class="scene-label">Pipe rules: current user only, one request per connection, errors as replies</div>
+    <div class="pipe-head"><h1>Named pipe <code>FF14ModManager.Bridge</code></h1><p><code>PipeOptions.CurrentUserOnly</code> on both ends &middot; one JSON line in, one JSON line out, per connection</p></div>
+    <div class="lanes">
+      <div class="lane"><div class="lane-title">FF14 Mod Manager app &rarr; pipe</div><div class="lane-body"><div class="tag">requests the plugin rejects</div>
+<table class="errtable">
+<tr><td>connection closes before a line</td><td class="r">empty request</td></tr>
+<tr><td><code>[1,2]</code> or <code>null</code></td><td class="r">not an object</td></tr>
+<tr><td><code>{not json</code></td><td class="r">(the JSON parser's message)</td></tr>
+<tr><td><code>{"cmd":"redraw"}</code></td><td class="r">unknown command 'redraw'</td></tr>
+</table>
+<div class="tag" style="margin-top:10px">each reply</div>
+<div class="json-block">{<span class="err">&quot;ok&quot;:false</span>,&quot;error&quot;:&quot;&lt;message&gt;&quot;}</div>
+<div class="tag">no bridge (game closed, plugin off)</div>
+<div style="font-size:12.5px">the app's <code>Bridge.Ask</code> returns <code>null</code> after its 2 s connect wait</div></div></div>
+      <div class="arrow">&rarr;<br>&larr;</div>
+      <div class="lane plugin"><div class="lane-title">FF14 Mod Manager Bridge (framework thread)</div><div class="lane-body"><ol>
+<li>one server instance; next one opens after each reply</li>
+<li>a client that connects but sends nothing for 1 s is dropped</li>
+<li>a handler that throws answers <code>{ok:false, error}</code>; the pipe keeps serving</li>
+<li>pipe faults go to the Dalamud log and the loop retries after 250 ms</li>
+</ol>
+<div class="xllog">log.Warning(e, "FF14 Mod Manager bridge: pipe error")</div></div></div>
+    </div>
+    <div class="note">No window, no settings, no slash command: this pipe is the plugin's whole surface.</div>
+  </body>
+</html>

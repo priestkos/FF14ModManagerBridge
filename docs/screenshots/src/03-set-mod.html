@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mock-up: setMod — Penumbra mod on/off + redraw</title>
+    <link rel="stylesheet" href="common.css" />
+  </head>
+  <body>
+    <div class="game-backdrop"></div>
+    <div class="mockup-banner">Mock-up</div>
+    <div class="scene-label">setMod: switch a Penumbra mod in a collection, then redraw you</div>
+    <div class="pipe-head"><h1><code>{"cmd":"setMod","collection":"&lt;guid&gt;","dir":"&lt;mod folder&gt;","enabled":true}</code></h1><p>Enable or disable a mod in a Penumbra collection, then redraw you so it shows straight away</p></div>
+    <div class="lanes">
+      <div class="lane"><div class="lane-title">FF14 Mod Manager app &rarr; pipe</div><div class="lane-body"><div class="tag">request</div>
+<div class="json-block">{&quot;cmd&quot;:&quot;setMod&quot;,&quot;collection&quot;:&quot;0c2b5f9e-7a41-4d1e-9b3a-5e6f7a8b9c0d&quot;,&quot;dir&quot;:&quot;Sample Hair Mod&quot;,&quot;enabled&quot;:true}</div>
+<div class="tag">reply · switched (or already in that state)</div>
+<div class="json-block">{<span class="ok">&quot;ok&quot;:true</span>}</div>
+<div class="tag">reply · failed</div>
+<table class="errtable">
+<tr><td><code>collection</code> is not a GUID</td><td class="r">bad collection id</td></tr>
+<tr><td><code>dir</code> missing or empty</td><td class="r">missing mod directory</td></tr>
+<tr><td><code>enabled</code> missing</td><td class="r">missing enabled flag</td></tr>
+<tr><td>Penumbra returns an error code</td><td class="r">Penumbra said ModMissing</td></tr>
+</table></div></div>
+      <div class="arrow">&rarr;<br>&larr;</div>
+      <div class="lane plugin"><div class="lane-title">FF14 Mod Manager Bridge (framework thread)</div><div class="lane-body"><ol>
+<li>validate <code>collection</code>, <code>dir</code>, <code>enabled</code></li>
+<li>Penumbra <code>TrySetMod(collection, dir, enabled)</code></li>
+<li><code>Success</code> or <code>NothingChanged</code> counts as done</li>
+<li>logged in &rarr; Penumbra <code>RedrawObject(0, Redraw)</code> on you</li>
+<li>reply <code>{ok}</code></li>
+</ol></div></div>
+    </div>
+    <div class="note">Only the mod you name is touched, in the collection you name. The redraw is skipped at the title screen.</div>
+  </body>
+</html>
