@@ -158,7 +158,7 @@ running. The exit code is the number of failed checks.
 ```
 FF14ModManagerBridge/Plugin.cs           services, pipe server start/stop, the three commands
 FF14ModManagerBridge/Core/Bridge.cs      pipe protocol (server loop + client Ask), shared with the app
-FF14ModManagerBridge.Tests/Program.cs    offline pipe harness (12 checks)
+FF14ModManagerBridge.Tests/Program.cs    offline real-pipe harness
 images/                                  icon.svg (source) and icon.png (manifest icon)
 docs/screenshots/, docs/videos/          mock-up PNGs and walkthrough video
 .github/workflows/                       build.yml (build + tests on every push), release.yml (tests + release on main)

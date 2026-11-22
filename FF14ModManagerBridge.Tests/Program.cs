@@ -8,6 +8,48 @@ using FF14ModManager.Core;
 var failed = 0;
 void Check(bool ok, string what) { Console.WriteLine($"{(ok ? "PASS" : "FAIL")}  {what}"); if (!ok) failed++; }
 
+// On Unix, a second client can connect to the listening socket while the first is handled.
+// Its queued connection must survive the transition to the next request.
+if (!OperatingSystem.IsWindows())
+{
+    var queuedPipe = "FF14ModManager.Test." + Guid.NewGuid().ToString("N");
+    using var queuedStop = new CancellationTokenSource();
+    var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var queuedServer = Bridge.Serve(async req =>
+    {
+        if ((string?)req["cmd"] == "first") { entered.SetResult(); await release.Task; }
+        return new JsonObject { ["echo"] = (string?)req["cmd"] };
+    }, queuedStop.Token, e => Console.WriteLine($"SERVER ERROR: {e}"), queuedPipe);
+    try
+    {
+        var first = Bridge.Ask(new JsonObject { ["cmd"] = "first" }, pipeName: queuedPipe);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await using var queued = new NamedPipeClientStream(".", queuedPipe, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+        await queued.ConnectAsync(3000);
+        using var reader = new StreamReader(queued, leaveOpen: true);
+        await using var writer = new StreamWriter(queued, leaveOpen: true) { AutoFlush = true };
+        await writer.WriteLineAsync("{\"cmd\":\"second\"}");
+        release.SetResult();
+        Check((string?)(await first)?["echo"] == "first", "first concurrent request succeeds");
+        try
+        {
+            var reply = await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            Check(reply != null && (string?)JsonNode.Parse(reply)?["echo"] == "second", "a queued Unix client survives the previous connection closing");
+        }
+        catch (Exception e) when (e is IOException or TimeoutException)
+        {
+            Check(false, $"a queued Unix client survives the previous connection closing ({e.GetType().Name}: {e.Message})");
+        }
+    }
+    finally
+    {
+        release.TrySetResult();
+        queuedStop.Cancel();
+        await queuedServer.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+}
+
 var pipe = "FF14ModManager.Test." + Guid.NewGuid().ToString("N")[..8];
 using var cts = new CancellationTokenSource();
 var server = Bridge.Serve(req => (string?)req["cmd"] == "boom"

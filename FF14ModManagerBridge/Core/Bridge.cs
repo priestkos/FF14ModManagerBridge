@@ -31,17 +31,34 @@ public static class Bridge
             {
                 await using var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
-                await pipe.WaitForConnectionAsync(ct);
-                using var reader = new StreamReader(pipe, leaveOpen: true);
-                await using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
-                // One server instance: a client that connects and never writes would otherwise block everyone until unload.
-                using var readTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                readTimeout.CancelAfter(RequestTimeoutMs);
-                var line = await reader.ReadLineAsync(readTimeout.Token);
-                JsonObject reply;
-                try { reply = line is null ? Error("empty request") : JsonNode.Parse(line) is JsonObject req ? await handle(req) : Error("not an object"); }
-                catch (Exception e) { reply = Error(e.Message); }
-                await writer.WriteLineAsync(reply.ToJsonString().AsMemory(), ct);
+                while (!ct.IsCancellationRequested)
+                {
+                    var connected = false;
+                    try
+                    {
+                        await pipe.WaitForConnectionAsync(ct);
+                        connected = true;
+                        using var reader = new StreamReader(pipe, leaveOpen: true);
+                        await using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
+                        // One server instance: a client that connects and never writes would otherwise block everyone until unload.
+                        using var readTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                        readTimeout.CancelAfter(RequestTimeoutMs);
+                        var line = await reader.ReadLineAsync(readTimeout.Token);
+                        JsonObject reply;
+                        try { reply = line is null ? Error("empty request") : JsonNode.Parse(line) is JsonObject req ? await handle(req) : Error("not an object"); }
+                        catch (Exception e) { reply = Error(e.Message); }
+                        await writer.WriteLineAsync(reply.ToJsonString().AsMemory(), ct);
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                    catch (Exception e) { onError?.Invoke(e); await Task.Delay(250, CancellationToken.None); }
+                    finally
+                    {
+                        // Unix must keep its listener alive across clients, or queued connections reset.
+                        // Windows keeps the original dispose-after-reply behavior: Disconnect can discard unread replies.
+                        if (connected && !OperatingSystem.IsWindows()) pipe.Disconnect();
+                    }
+                    if (OperatingSystem.IsWindows()) break;
+                }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
             catch (Exception e) { onError?.Invoke(e); await Task.Delay(250, CancellationToken.None); }   // e.g. client hung up early

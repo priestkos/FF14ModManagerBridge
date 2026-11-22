@@ -38,7 +38,10 @@ jobs:
           if-no-files-found: error
 
   tests:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - name: Set up .NET
